@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,11 +30,14 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
-fun LoginScreen() {
+fun LoginScreen(onLoginSuccess: () -> Unit) {
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var register by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -43,7 +48,7 @@ fun LoginScreen() {
     ) {
         Text(
             modifier = Modifier.padding(10.dp),
-            text = "Zaloguj się",
+            text = if (register) "Zarejestruj się" else "Zaloguj się",
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold,
         )
@@ -73,19 +78,56 @@ fun LoginScreen() {
                 } else if (password.isEmpty()) {
                     Toast.makeText(context, "Podaj hasło.", Toast.LENGTH_SHORT).show()
                 } else {
-//                    authViewModel.login(context, email, password)
+                    loading = true
+                    if (register) {
+                        auth.createUserWithEmailAndPassword(email, password)
+                            .addOnCompleteListener { task ->
+                                if (task.isSuccessful) {
+                                    loading = false
+                                    onLoginSuccess()
+                                } else {
+                                    loading = false
+                                }
+                            }
+                    } else {
+                        auth.signInWithEmailAndPassword(email, password)
+                            .addOnCompleteListener { task ->
+                                if (task.isSuccessful) {
+                                    loading = false
+                                    onLoginSuccess()
+                                } else {
+                                    loading = false
+                                }
+                            }
+                    }
                 }
             },
         ) {
-            Text("Zaloguj się")
+            Text(
+                text = if (register) "Zarejestruj się" else "Zaloguj się",
+            )
         }
         TextButton(
             modifier = Modifier.padding(10.dp),
             onClick = {
-//                navController.navigate("register")
+                register = !register
             },
         ) {
-            Text("Nie masz konta? Zarejestruj się")
+            Text(
+                text = if (register) "Masz już konto? Zaloguj się" else "Nie masz konta? Zarejestruj się",
+            )
+        }
+        if (loading) {
+            Text(
+                modifier = Modifier.padding(10.dp),
+                text = "Ładowanie...",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            LinearProgressIndicator (
+                color = MaterialTheme.colorScheme.secondary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
         }
     }
 }
